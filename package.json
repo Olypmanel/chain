@@ -1,0 +1,13 @@
+{
+  "name": "rail",
+  "version": "1.0.0",
+  "description": "",
+  "main": "execute.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Emmanuel Segun",
+  "license": "ISC"
+}
