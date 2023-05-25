@@ -4,8 +4,12 @@
   "description": "",
   "main": "execute.js",
   "type": "module",
+  "dependencies": {
+    "nodemon": "^2.0.20"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon execute.js"
   },
   "keywords": [],
   "author": "Emmanuel Segun",

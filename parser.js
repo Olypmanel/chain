@@ -1,6 +1,6 @@
 import { regex, memoFunction, skipSpace, operPres } from "./tools.js";
 import { parserHelper } from "./helper.js";
-import { ParameterError } from "./error.js";
+import { OperatorError, ParameterError } from "./error.js";
 export function parser(program, memo = {}) {
     const id = str => /^-?\d*\.?\d+/.test(str) ? 'num' : /^"[^"]*"/.test(str) ? 'str' : 'name';
     const { one, identifier, fn } = regex;
@@ -42,10 +42,11 @@ export function parser(program, memo = {}) {
         let nameOrVal = match[0];
         program = skipSpace(program.replace(nameOrVal, ''));
         if (nameOrVal in memo) { // FUNCTION INVOCATION 
+            console.log(program);
             let argslen = memo[nameOrVal].$args.length;
             const argsArr = [];
             for (argslen; argslen >= 1; argslen--) {
-                const args = parser(program);
+                const args = parser(program, memo);
                 if (args.expr === undefined) throw new Error(`Inconstitent par and args`);
                 argsArr.push(args.expr);
                 program = args.program;
@@ -54,7 +55,7 @@ export function parser(program, memo = {}) {
         } else expr = { [id(match)]: nameOrVal };
     }
     else if (/^\(/.test(program)) { // GIVE SUPPORT TO PARENTHESES OR NESTED EXPRESSIONS
-        const paren = parser(program.slice(1));
+        const paren = parser(program.slice(1), memo);
         if (paren.program[0] != ')') throw new SyntaxError('CLOSING PARENTHESIS ")" IS NEEDED');
         if ('fn' in paren.expr) throw new Error(`Can't decalare fn in an expression`);
         expr = { paren: paren.expr };
@@ -66,7 +67,7 @@ export function parser(program, memo = {}) {
         const arr = [], obj = {};
         if (match[0].includes('[')) {
             while (program[0] != ']') {
-                const array = parser(program);
+                const array = parser(program, memo);
                 if (operPres(array.expr) == '=') throw new SyntaxError('Unsurpported arr syntax, can\'t use "=" oper in an arr');
                 arr.push(array.expr);
                 program = array.program[0] == ',' ? skipSpace(array.program.slice(1)) : array.program;
@@ -74,7 +75,7 @@ export function parser(program, memo = {}) {
             expr = { arr };
         } else {
             while (program[0] != '}') {
-                const object = parser(program);
+                const object = parser(program, memo);
                 const prop = object.expr.name ?? object.expr.num ?? object.expr.str;
                 if (operPres(object.expr) != '=') throw new SyntaxError('Unsurpported object syntax');
                 else if (!prop) throw new SyntaxError('Obj property must be a str, num or name');
@@ -84,7 +85,13 @@ export function parser(program, memo = {}) {
             }
             expr = { obj };
         }
-        program = skipSpace(program).slice(1);
+        program = skipSpace(skipSpace(program).slice(1));
+        if (match = program.match(/^([*^%\-+/])/)) {
+            const chain = parser(program.slice(1), memo);
+            if ('obj' in expr || 'obj' in chain.expr) throw new OperatorError(`Obj does not support "${match[1]}" oper`);
+            program = chain.program;
+            expr = { ...expr, [match[1]]: chain.expr };
+        }
     }
     else throw new SyntaxError(`${program} IS NOT A VALID SYNTAX`);
     return { expr, program };

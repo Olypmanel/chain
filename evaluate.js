@@ -27,19 +27,23 @@ export default function evaluate(expr, local, global, params = {}) {
         evaluatorHelper(expr, local, global, params, math);
     }
     else if (operPres(expr) == '=') { // EVALUATE IDENTIFIER
+        let name = expr.name;
         if (!('name' in expr)) throw new SyntaxError(`AN IDENTIFIER MUST BE AT THE LEFT SIDE OF AN "=" OPERATOR`);
         if (expr.name in memoFunction) throw new Error(`${expr.name} HAS BEEN INITIALLY DECLARED`);
-        return global[expr.name] = evaluate(expr['='], local, global);
+        expr = expr['='];
+        while (operPres(expr)) expr = evaluatorHelper(expr, local, global, params, math);
+        evaluatorHelper(expr, local, global, params, math);
+        return global[name] = calculate(math);
     }
     else if ('arr' in expr || 'obj' in expr) { //EVALUATE ARRAY AND OBJECT
         const obj = {};
         if ('arr' in expr) return expr.arr.map(elem => evaluate(elem, local, global));
-        for (const key in expr.obj) obj[key] = evaluate(expr.obj[key], local, global);
+        else for (const key in expr.obj) obj[key] = evaluate(expr.obj[key], local, global);
         return obj;
     }
     else { // EVALUATE LITERAL EXPRESSION
         while (operPres(expr)) expr = evaluatorHelper(expr, local, global, params, math);
         evaluatorHelper(expr, local, global, params, math);
     }
-    return calculate(math.join` `);
+    return calculate(math);
 }
