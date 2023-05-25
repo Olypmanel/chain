@@ -1,81 +1,90 @@
-import { regex, memoFunction, skipSpace } from "./tools.js";
+import { regex, memoFunction, skipSpace, operPres } from "./tools.js";
 import { parserHelper } from "./helper.js";
 import { ParameterError } from "./error.js";
-export function parser(program) {
+export function parser(program, memo = {}) {
     const id = str => /^-?\d*\.?\d+/.test(str) ? 'num' : /^"[^"]*"/.test(str) ? 'str' : 'name';
-    const { one, three, three1, brac2, fn } = regex;
+    const { one, identifier, fn } = regex;
     program = skipSpace(program); let expr = null, match = null;
     if (!program) return '';
-    else if (match = program.match(fn)) {
-        let [_, name, args] = match; args = args.split` `.filter(a => a);
-
+    else if (match = program.match(fn)) { // SUPPORTS FOR FUNCTION DECLARATION
+        let [_, name, args] = match;
+        args = args.split` `.filter(a => a);
         if ((new Set(args)).size != args.length) throw new ParameterError(`can't declare two pars with the same name`);
         program = skipSpace(program.replace(_, ''));
-
-        const body = parser(program);
-        expr = { fn: name, args, body: body.expr };
-        memoFunction[name] = args;
-        program = body.program;
-    }
-    else if (match = (program.match(three) || program.match(three1))) {
-        const [_, iden, oper, value] = match;
-        if (oper == '=' && iden in memoFunction) throw new Error(`${iden} IS ALREADY DECLARED AS A FUNTION`);
-        else if (iden in memoFunction) {
-            program = skipSpace(program.replace(iden, ''));
-            let argslen = memoFunction[iden].length;
-            const argsArr = [];
-            for (argslen; argslen >= 1; argslen--) {
-                const args = parser(program);
-                argsArr.push(args.expr);
-                program = args.program;
-                expr = { call: iden, args: argsArr };
+        if (program[0] == '{') { // IF FUNCTION IS MULTI-LINE
+            const bodyExpr = []; program = program.slice(1);
+            memo[name] = { $args: args, nest: {} };
+            while (program[0] != '}') {
+                if (!program) throw new SyntaxError(`"}" is needed for closing function decalaration`);
+                const body = parser(program, memo[name].nest);
+                bodyExpr.push(body.expr);
+                program = body.program;
             }
+            expr = { fn: name, args, body: bodyExpr };
+            program = program.slice(1);
         }
-        else {
-            if (value in memoFunction) {
-                const call = parser(program.replace(program.slice(0, _.length - value.length), ''));
-                program = call.program;
-                expr = { [id(iden)]: iden, [oper]: call.expr };
-
-            } else {
-                expr = { [id(iden)]: iden, [oper]: { [id(value)]: value } };
-                let deeperExpr = expr[oper]; program = skipSpace(program.replace(_, ""));
-                const chain = parserHelper(program, deeperExpr);
-                program = chain.program; deeperExpr = chain.deeperExpr;
-            }
+        else { // IF FUNCTION IS SINGLE LINE
+            const body = parser(program, memo);
+            expr = { fn: name, args, body: body.expr };
+            memo[name] = { $args: args };
+            program = body.program;
         }
     }
-    else if (match = program.match(brac2)) {
+    else if (match = program.match(identifier)) {
         const [_, iden, oper] = match;
-        const paren = parser(skipSpace(program.replace(_, '')));
-        expr = { [id(iden)]: iden, [oper]: { paren: paren.expr } };
-        if (paren.program[0] != ')') throw new SyntaxError('CLOSING PARENTHESIS ")" IS NEEDED');
-        program = skipSpace(paren.program.slice(1)); let deeperExpr = expr[oper];
-        const chain = parserHelper(program, deeperExpr);
-        program = chain.program; deeperExpr = chain.deeperExpr;
+        program = program.replace(_, '');
+        const deeperExpr = parser(program, memo);
+        if ('fn' in deeperExpr.expr) throw new SyntaxError("Can't use fn as a value");
+        expr = { [id(iden)]: iden, [oper]: deeperExpr.expr };
+        program = deeperExpr.program;
     }
     else if (match = program.match(one)) {
         let nameOrVal = match[0];
         program = skipSpace(program.replace(nameOrVal, ''));
-        if (nameOrVal in memoFunction) {
-            let argslen = memoFunction[nameOrVal].length;
+        if (nameOrVal in memo) { // FUNCTION INVOCATION 
+            let argslen = memo[nameOrVal].$args.length;
             const argsArr = [];
             for (argslen; argslen >= 1; argslen--) {
                 const args = parser(program);
-                if (args.expr === undefined) throw new Error(`inconstitent par and args`);
+                if (args.expr === undefined) throw new Error(`Inconstitent par and args`);
                 argsArr.push(args.expr);
                 program = args.program;
             }
             expr = { call: nameOrVal, args: argsArr };
         } else expr = { [id(match)]: nameOrVal };
     }
-    else if (/^\(/.test(program)) {
+    else if (/^\(/.test(program)) { // GIVE SUPPORT TO PARENTHESES OR NESTED EXPRESSIONS
         const paren = parser(program.slice(1));
         if (paren.program[0] != ')') throw new SyntaxError('CLOSING PARENTHESIS ")" IS NEEDED');
-        if ('fn' in paren.expr) throw new Error(`can't decalare fn in an expression`);
+        if ('fn' in paren.expr) throw new Error(`Can't decalare fn in an expression`);
         expr = { paren: paren.expr };
         program = skipSpace(paren.program.slice(1));
         program = parserHelper(program, expr).program;
+    }
+    else if (match = program.match(/^(\[|\{)/)) { // GIVE SURPPORT TO ARRAYS AND OBJECTS
+        program = skipSpace(program.replace(match[0], ''));
+        const arr = [], obj = {};
+        if (match[0].includes('[')) {
+            while (program[0] != ']') {
+                const array = parser(program);
+                if (operPres(array.expr) == '=') throw new SyntaxError('Unsurpported arr syntax, can\'t use "=" oper in an arr');
+                arr.push(array.expr);
+                program = array.program[0] == ',' ? skipSpace(array.program.slice(1)) : array.program;
+            }
+            expr = { arr };
+        } else {
+            while (program[0] != '}') {
+                const object = parser(program);
+                const prop = object.expr.name ?? object.expr.num ?? object.expr.str;
+                if (operPres(object.expr) != '=') throw new SyntaxError('Unsurpported object syntax');
+                else if (!prop) throw new SyntaxError('Obj property must be a str, num or name');
+                else if (operPres(object.expr['=']) == '=') throw new SyntaxError('nested assignment is not supported in obj');
+                obj[prop] = object.expr['='];
+                program = object.program[0] == ',' ? skipSpace(object.program.slice(1)) : object.program;
+            }
+            expr = { obj };
+        }
+        program = skipSpace(program).slice(1);
     }
     else throw new SyntaxError(`${program} IS NOT A VALID SYNTAX`);
     return { expr, program };
@@ -83,7 +92,7 @@ export function parser(program) {
 export default function parsedExpressions(programme) {
     const expressions = [];
     while (programme) {
-        const { expr, program } = parser(programme);
+        const { expr, program } = parser(programme, memoFunction);
         expressions.push(expr);
         programme = program;
     }

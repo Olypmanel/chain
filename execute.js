@@ -1,16 +1,25 @@
 import evaluate from "./evaluate.js";
 import { globalVars, localVars, memoFunction } from "./tools.js";
-import parsedExpressions from "./parser.js";
-const execuute = program =>
-    parsedExpressions(program).forEach(expr => console.log(evaluate(expr)));
+import parsedExpressions, { parser } from "./parser.js";
+const execute = program =>
+  parsedExpressions(program).forEach(expr => console.log(evaluate(expr, localVars, globalVars)));
 const program = `
-y = 34
-x = y = (56 - 43 * (10 + 2))
+y = 2
+x = v = (u = 3 - (3 / 3) * 1)
+u
 fn avg w z => (w + z) / y
 avg 4 (-3) 
-avg 7 8 -  4
- y = c = t = 5
+b = avg x 8
+y = c = t = 5
+v = 34
+fn add m b => m + b
+add 3 4
+add 6 6
+b = "56"
+n = [45]
+ v = {b = y}
+ v
 `;
-execuute(program);
+// execuute(program);
 const print = console.log;
-print(localVars);
+execute(program);
