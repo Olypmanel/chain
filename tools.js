@@ -57,16 +57,14 @@ export const operator = {
 
 };
 export const regex = {
-    one: /^(-?\d*\.?\d+|[a-zA-Z]+\w*|"[^"]*")/,
-    exp: /^([\-+%*/=^])\s*(\-?\d*\.?\d+|[a-zA-Z]+\w*|"[^"]*")/,
-    three: /^(-?\d*\.?\d+|"[^"]*"|[a-zA-Z]+\w*)\s*([\-+%*/^=])\s*(-?\d*\.?\d+|[a-zA-Z]+\w*|"[^"]*")/,
-    brac1: /^([\-+%*/=^])\s*\(/,
+    identifier: /^(-?\d*\.?\d+|[a-zA-Z]+\w*|"[^"]*")/,
     fn: /^fn +([a-zA-Z_]+\d*) *\(? *(([a-zA-Z_]+\d* *)*) *\)? *=>/,
-    identifier: /^(-?\d*\.?\d+|"[^"]*"|[a-zA-Z]+\w*)\s*([\-+%*/^=])/,
-
+    call: /^([a-zA-Z]+\w*) *\(/, // function invocation
+    combo: /^([\[\{\($=+\-*^%/]|\*\*|-?\d*\.?\d+|[a-zA-Z]+\w*|"[^"]*")/,
+    oper: /^([%$\-+*/^!&])/
 };
-export const skipSpace = program => program.replace(/^\s*/, '');
+export const skipSpace = program => program.replace(/^(\s*|\s*#.*)/, '');
 export const operPres = expr => {
-    for (const oper of '-^/+%*=') if (oper in expr) return oper;
+    for (const oper of [...'$-^/+%*=', '**']) if (oper in expr) return oper;
     return false;
 };
