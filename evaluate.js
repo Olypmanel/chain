@@ -27,11 +27,17 @@ export default function evaluate(expr, local, global, params = {}) {
         evaluatorHelper(expr, local, global, params, math);
     }
     else if (operPres(expr) == '=') { // EVALUATE IDENTIFIER
-        let name = expr.name;
-        if (!('name' in expr)) throw new SyntaxError(`AN IDENTIFIER MUST BE AT THE LEFT SIDE OF AN "=" OPERATOR`);
-        if (expr.name in memoFunction) throw new Error(`${expr.name} HAS BEEN INITIALLY DECLARED`);
-        expr = expr['='];
-        return global[name] = evaluate(expr, local, global);
+        if (math.length) {  // IF IT IS INDEXING I.E FOR ARR OR OBJ
+            math.push("=");
+            while (operPres(expr)) expr = evaluatorHelper(expr['='], local, global, params, math);
+            evaluatorHelper(expr, local, global, params, math);
+        } else { // IF  IT IS NORMAL ASSIGNMENT
+            let name = expr.name;
+            if (!('name' in expr)) throw new SyntaxError(`AN IDENTIFIER MUST BE AT THE LEFT SIDE OF AN "=" OPERATOR`);
+            if (expr.name in memoFunction) throw new Error(`${expr.name} HAS BEEN INITIALLY DECLARED`);
+            expr = expr['='];
+            return global[name] = evaluate(expr, local, global);
+        }
     }
     else if (!operPres(expr) && expr.name in global) return global[expr.name];
     else if ('arr' in expr || 'obj' in expr) { //EVALUATE ARRAY AND OBJECT
