@@ -1,8 +1,6 @@
 import evaluate from "./evaluate.js";
-import { globalVars, localVars, operator } from "./tools.js";
-import parsedExpressions, { parser } from "./parser.js";
+import { globalVars, localVars } from "./tools.js";
+import parsedExpressions from "./parser.js";
 import program from "./program.js";
-const execute = program =>
-  parsedExpressions(program).forEach(expr => evaluate(expr, localVars, globalVars));
-execute(program);
-// console.log(operator['==']([12], [12]))
+const execute = (parsedExpr, l = localVars, g = globalVars) => parsedExpr.forEach(expr => evaluate(expr, l, g));
+execute(parsedExpressions(program));

@@ -6,6 +6,7 @@ export const localVars = Object.create(null);
 const str = /^"([^"]*)"$/, num = /^-?\d*\.?\d+$/, match = null;
 export const isEqual = (a, b) => {
     if (typeof a !== typeof b) return false;
+    else if (Array.isArray(a) !== Array.isArray(b)) return false;
     else if (typeof a == 'object') {
         if (Object.keys(a).length !== Object.keys(b).length) return false;
         for (const elem in a) if (!isEqual(a[elem], b[elem])) return false;
@@ -82,12 +83,13 @@ export const operator = {
         c = Number.isNaN(+c) ? c : +c;
         if (typeof a != 'object') throw new Error();
         else if (Array.isArray(a)) {
-            if (!(b in a) && b != -1) throw new IndexError(`${b} is not an index or elem of queried`);
+            b = String(b).replace(/\"/g, '');
+            if (!(b in a) && +b != -1) throw new IndexError(`${b} is not an index or elem of queried`);
             else if (b >= 0) a[b] = c;
             else if (b == -1 && 0 in a) a[a.length - 1] = c;
             else throw new IndexError(`${b} is not an index of empty arr`);
         }
-        a[b.replace(/\"/g, '')] = c;
+        else a[b.replace(/\"/g, '')] = c;
         return false;
     }
 };

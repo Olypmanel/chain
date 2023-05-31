@@ -13,14 +13,14 @@ export function parser(program, memo = {}) {
         program = skipSpace(program.replace(_, ''));
         const body = parser(program, memo); // RECURSION
         if (!body) throw new Error(`fn must have a body`);
-        expr = { fn: name, args, body: body.expr };
+        expr = { fn: name, args, body: body.expr.exec ? body.expr.exec : [body.expr] };
         memo[name] = { $args: args };
         program = body.program;
     }
     else if (/^<<</.test(program)) {
         const exec = []; program = skipSpace(program.slice(3));
         while (!(/^>>>/.test(program))) {
-            const body = parser(program, memo);
+            const body = parser(program, memo); // RECURSION
             program = skipSpace(body.program);
             exec.push(body.expr);
         }
@@ -41,9 +41,9 @@ export function parser(program, memo = {}) {
         expr = { pres: { call: match[1], $args } };
     }
     else if (numNameStr.test(program) && !/^in\s+/.test(program)) { // 3 LITERAL NUMBERS, IDENTIFIERS AND STRINGS  WITHOUT OPERATORS
-        match = program.match(numNameStr);
-        program = skipSpace(program.replace(match[0], ''));
-        expr = { [id(match)]: match[0] };
+        let [m] = program.match(numNameStr);
+        program = skipSpace(program.replace(m, ''));
+        expr = { [id(m)]: Number.isNaN(+m) ? m : +m };
     }
     else if (match = program.match(/^(\[|\(|\{)/)) { //4 GIVE SURPPORT TO ARRAYS, OBJECTS AND PARENTHESES
         program = skipSpace(program.slice(1));
@@ -68,21 +68,21 @@ export function parser(program, memo = {}) {
         } else {
             while (program[0] != '}') {
                 const object = parser(program, memo); // RECURSION
-                const prop = object.expr.name ?? object.expr.num ?? object.expr.str;
+                const prop = String(object.expr.name ?? object.expr.num ?? object.expr.str);
                 if (operPres(object.expr) != '$') throw new SyntaxError('Unsurpported object syntax');
                 else if (!prop) throw new SyntaxError('Obj property must be a str, num or name');
                 else if ([...'$='].includes(operPres(object.expr['$']))) throw new SyntaxError('nested assignment is not supported in obj');
                 else if (!object) throw new SyntaxError(`"}" is missing at obj expr `);
-                obj[prop.replace(/\"/g, "")] = object.expr['$'];
+                obj[(prop).replace(/\"/g, "")] = object.expr['$'];
                 program = object.program[0] == ',' ? skipSpace(object.program.slice(1)) : object.program;
             }
             expr = { pres: { obj } };
         }
         program = skipSpace(skipSpace(program).slice(1));
     }
-    else if (skipSpace(program).match(oper)) { }// ESCAPE THE ELSE CALUASE IF OPER PRESENT
+    else if (skipSpace(program).match(oper)) { }// ESCAPE THE ELSE CLAUSE IF OPER PRESENT
     else throw new SyntaxError(`${program} not supported`);
-    if (match = skipSpace(program).match(oper)) { // GIVE SUPPORTS FOR OPER LINKAGE, CHAIN SUPPORT WHICH WORKS GENERALLY
+    if (match = skipSpace(program).match(oper)) { // GIVE SUPPORTS FOR OPER LINKAGE. THIS IS TYPICAL OF CHAIN LANGUAGE
         const chain = parser(program.replace(match[0], ''), memo); // RECURSION
         if (!chain) throw new SyntaxError(`Right operand is needed for ${match[0]} oper`);
         if ('fn' in chain.expr) throw new AssignmentError(`fn decalaration can't be used with any oper`);

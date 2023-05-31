@@ -47,9 +47,10 @@ string has been parsed, then it returns an __Array (also known as List in python
 
 ## Rules and syntax of chain programming language
 
-1. chain support these operators __[+ - = * ^ in == != # $ % / =>]__
+1. chain support these operators __[+ - = * ^ in == != # $ % / #= => ]__.
+All these are binary except __[- #=]__. __[ - ]__ can be both unary and binary operator while  __[ #= ]__ is a ternary operator.
 2. __comma__ is optional in chain language, believe me, it is completely optional. Programs are separated by __spaces__ and __none operator__ input
-3. __chain__ just like __javascript__ ignores white spaces.
+3. __chain__ just like __javascript__ ignores white spaces. and // donates comments
 4. Just like __python__ there are no constant variables declarations. Variable can declared and redeclared at any time.
 5. Chain __variables__ are known as __name__, __Number__ as __num__, __String__ as __str__, 
     __Array or List__ as __arr__, __Object or Dict__ as __obj__, __Function__ as __fn__.
@@ -135,7 +136,9 @@ But like __JS__ it returns the new length of the __arr__
 
 12. __^__ does what __%__ does but pushes an item to the beginning of the  __arr__ ( and return the new length of the __arr__) rather than the end
 
-13. __#__ in conjunction with __=__ is used for indexing into an __arr__ or an __obj__. It is a __Ternary oper__
+13. __#__ in conjunction with __=__ is used for indexing into an __arr__ or an __obj__. It is a __Ternary oper__. With a syntax as
+     (arr or obj) # (index or key ) = value. NOTE: if value is a chain i.e contains an oper it must be wrapped by a parenthesis otherwise chain throws an error
+
 
 14. __-__ pops off the item at the index specified by right operand and return the item at that index. It raise an error if the left operand is not an available index of the __arr__ .
 
@@ -148,8 +151,10 @@ But like __JS__ it returns the new length of the __arr__
     print(ar - 0  "==>" ar) // 34 "==>"  [ 1, 2, 3, 2 ]
     print(ar - -1 "==>" ar) // 2 "==>"  [ 1, 2, 3 ]
     ar # 1 = "In place" // change the item at index 1 in ar to "In place"
-    print(ar) // [ 1, "In place", 3 ]
-    print([12 "hello" [ 2 ] ] == [12, "hello", [ 2 ] ]) // true; NOTE how comma was ignored
+    ar # 0 = ( 2 + 3 ) // IS VALID
+    print(ar) // [ 5, "In place", 3 ]
+    ar # 0  = 2 + 3 // ERROR WRAP VALUE BY A PARENTHESIS
+    print( [12 "hello" [ 2 ] ] == [12, "hello", [ 2 ] ] ) // true; NOTE how comma was ignored
 ```
 
 ### OBJECT OR DICT ( obj )
@@ -172,11 +177,11 @@ But like __JS__ it returns the new length of the __arr__
 
 ```js
     print (collection # "name") // "Emmanuel Segun"
-    collection # "age" = 18
+    collection # "age" = 18 // THINK py  collection["age"] = 18  or js  collection.age = 18
     print(collection # "age") // 18
 ```
 ### FUNCTION DECLARATION 
-
+    
 
 
 ### Chain Global Function

@@ -9,10 +9,12 @@ export default function calculate(arr) {
     calc(pre1, arr);
     calc(pre2, arr);
     calc(pre3, arr);
-    const ans = Number(arr[0]);
-    if (arr[0] === undefined) return false;
-    else if (typeof arr[0] == 'object') return arr[0];
-    return Number.isNaN(ans) ? arr[0] : ans;
+    const elem = arr[0];
+    if (elem === true) return true; else if (elem === false) return false;
+    const ans = Number(elem);
+    if (elem === undefined) return false;
+    else if (typeof elem == 'object') return elem;
+    return Number.isNaN(ans) ? elem : ans;
 }
 function calc(op, arr) {
     while (init(op, arr)) {
